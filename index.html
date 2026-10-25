@@ -1,0 +1,743 @@
+<title>ART REMAKE</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=Oranienbaum&display=swap">
+<style>
+/* Concept: a fixed 3D stage lives inside a tall scroll track; scroll position drives a camera spline.
+   Glass text panels sit opposite the framed painting. Manifest and contacts follow as plain sections. */
+:root{
+  --ink:#0d0b09; --paper:#f2e8d5; --muted:#cdbfa5; --gold:#d4af37; --gold-deep:#a8841f;
+  --olive:#6d6f30; --forest:#235135; --sand:#dcc8ad; --umber:#2a1d10;
+  --fd:'Oranienbaum','Didot','Times New Roman',serif;
+  --fb:'Golos Text',system-ui,-apple-system,'Segoe UI',sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ink);color:var(--paper);font:400 15px/1.6 var(--fb);-webkit-font-smoothing:antialiased}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+
+/* header */
+#top{position:fixed;inset:0 0 auto 0;z-index:30;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px 24px;
+  padding:calc(env(safe-area-inset-top,0px) + 14px) max(16px,env(safe-area-inset-right,0px)) 16px max(16px,env(safe-area-inset-left,0px));
+  background:linear-gradient(180deg,rgba(10,8,6,.85),rgba(10,8,6,0));pointer-events:none}
+#top a{pointer-events:auto;text-decoration:none}
+.brand{font-family:var(--fd);font-size:20px;letter-spacing:.34em;color:var(--gold)}
+#top nav{display:flex;gap:clamp(14px,2.4vw,34px)}
+#top nav a{font-size:12px;letter-spacing:.14em;text-transform:uppercase;padding:6px 0;border-bottom:1px solid transparent;color:var(--paper)}
+#top nav a:hover{border-color:var(--gold)}
+#top nav a b{font-weight:500;color:var(--gold);margin-right:.55em}
+
+/* stage */
+#track{position:relative}
+.stage{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden;background:var(--ink)}
+#gl{position:absolute;inset:0;width:100%;height:100%;display:block}
+.vig{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 58%,rgba(0,0,0,.5) 100%)}
+.ov{position:absolute;pointer-events:none;opacity:var(--a,0)}
+#nogl{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px;font-family:var(--fd);font-size:22px}
+
+.hero{--a:1;left:0;bottom:0;width:min(600px,100%);padding:36px 24px calc(env(safe-area-inset-bottom,0px) + 5vh) max(16px,env(safe-area-inset-left,0px));
+  background:linear-gradient(90deg,rgba(10,8,6,.72) 0%,rgba(10,8,6,.5) 65%,rgba(10,8,6,0) 100%)}
+.kick{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);font-weight:500}
+.hero h1{font:400 clamp(30px,4.7vw,70px)/.98 var(--fd);margin:14px 0 16px;text-wrap:balance;letter-spacing:.005em}
+.hero p{margin:0 0 22px;font-size:clamp(12.5px,1.75vh,14.5px);line-height:1.6;color:#e6dac3;max-width:50ch}
+.enter{pointer-events:auto;cursor:pointer;font:500 13px var(--fb);letter-spacing:.5em;text-transform:uppercase;color:var(--gold);background:rgba(10,8,6,.35);
+  border:1px solid var(--gold);padding:15px 26px 15px 32px;outline:1px solid rgba(212,175,55,.45);outline-offset:4px;transition:background .25s,color .25s}
+.enter:hover{background:var(--gold);color:var(--ink)}
+.hint{display:inline-block;margin-left:22px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+
+.roomov{inset-inline:0;margin-inline:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 10vh);width:min(780px,calc(100% - 32px));text-align:center;
+  padding:26px 20px;background:radial-gradient(ellipse at center,rgba(10,8,6,.62),rgba(10,8,6,0) 75%)}
+.roomov h2{font:400 clamp(34px,6.4vw,92px)/1 var(--fd);margin:12px 0 12px;color:var(--paper);text-wrap:balance}
+.roomov p{margin:0 auto;font-style:italic;font-size:clamp(14px,2vh,18px);color:#e6dac3;max-width:46ch}
+
+.corr{inset-inline:0;margin-inline:auto;top:50%;width:min(820px,calc(100% - 32px));transform:translateY(-50%);text-align:center;
+  padding:30px clamp(18px,4vw,48px);background:rgba(12,10,7,.55);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid rgba(212,175,55,.5);border-bottom:1px solid rgba(212,175,55,.5)}
+.corr p{margin:0;font:400 clamp(17px,2.5vw,30px)/1.4 var(--fd);text-wrap:balance}
+
+.art{top:50%;width:min(46vw,620px);max-height:calc(100% - 170px);overflow:hidden;
+  transform:translate(calc(var(--dx,0) * (1 - var(--a,0)) * 1px),-50%);
+  background:rgba(14,11,8,.6);backdrop-filter:blur(18px) saturate(1.1);-webkit-backdrop-filter:blur(18px) saturate(1.1);border:1px solid rgba(212,175,55,.38)}
+.art.r{right:max(4vw,env(safe-area-inset-right,0px))}
+.art.l{left:max(4vw,env(safe-area-inset-left,0px))}
+.art .inner{padding:clamp(18px,3vh,34px) clamp(18px,2.4vw,36px)}
+.art .no{display:block;font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);font-weight:500;margin-bottom:12px}
+.art h3{font:400 clamp(20px,3.1vh,31px)/1.14 var(--fd);margin:0 0 .65em;text-wrap:balance}
+.art .hook{margin:0 0 1em;padding-left:14px;border-left:1px solid var(--gold);font-style:italic;color:#eadfc7;font-size:clamp(12.5px,1.9vh,15.5px);line-height:1.55}
+.art .desc{margin:0;color:var(--muted);font-size:clamp(12px,1.8vh,14.5px);line-height:1.62}
+
+.hud{position:absolute;left:max(16px,env(safe-area-inset-left,0px));bottom:calc(env(safe-area-inset-bottom,0px) + 14px);pointer-events:none;
+  font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+.hud b{color:var(--gold);font-weight:500}
+.rail{position:absolute;left:0;bottom:0;height:2px;width:100%;background:rgba(212,175,55,.18)}
+.rail i{display:block;height:100%;width:calc(var(--p,0) * 100%);background:var(--gold)}
+
+#loader{position:fixed;inset:0;z-index:50;display:grid;place-items:center;background:var(--ink);transition:opacity .7s;text-align:center}
+#loader.gone{opacity:0;pointer-events:none}
+#loader span{display:block;font-family:var(--fd);font-size:clamp(26px,5vw,48px);letter-spacing:.4em;color:var(--gold);padding-left:.4em}
+#loader small{display:block;margin-top:14px;font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted)}
+
+/* flat sections */
+.band{padding-block:clamp(72px,10vw,140px);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1180px;margin:0 auto}
+section[id]{scroll-margin-top:0}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:clamp(28px,5vw,72px);align-items:center}
+.cols>*{min-width:0}
+.lbl{font-size:11px;letter-spacing:.3em;text-transform:uppercase;font-weight:500}
+
+#manifest{background:var(--forest);color:var(--paper)}
+#manifest .lbl{color:var(--gold)}
+#manifest h1{font:400 clamp(30px,5.4vw,78px)/1.02 var(--fd);margin:16px 0 18px;max-width:17ch;text-wrap:balance}
+#manifest .sub{font-style:italic;font-size:clamp(16px,2vw,21px);color:#e0d6bf;max-width:44ch;margin:0 0 clamp(48px,7vw,96px)}
+#manifest h2{font:400 clamp(24px,3.2vw,42px)/1.1 var(--fd);margin:0 0 20px;color:var(--gold)}
+#manifest .body p{margin:0;font-size:clamp(15px,1.5vw,17.5px);line-height:1.7;color:#ece2cc;max-width:52ch}
+.gframe{padding:12px;background:linear-gradient(135deg,#e7c75a,#a8841f 45%,#e7c75a);box-shadow:0 18px 50px rgba(0,0,0,.45)}
+.gframe canvas{display:block;width:100%;height:auto;aspect-ratio:4/5;border:2px solid rgba(0,0,0,.55);background:#111}
+.team{margin-top:clamp(64px,9vw,128px);padding-top:clamp(32px,5vw,56px);border-top:1px solid rgba(212,175,55,.45)}
+.team .sub2{margin:0;font-style:italic;color:#e0d6bf;font-size:18px}
+.card{display:grid;grid-template-columns:minmax(120px,190px) 1fr;gap:22px;align-items:center;background:rgba(0,0,0,.2);padding:20px;border:1px solid rgba(212,175,55,.35)}
+.card .pic{padding:6px;background:linear-gradient(135deg,#e7c75a,#a8841f 45%,#e7c75a);border-radius:50%/42%}
+.card canvas{display:block;width:100%;aspect-ratio:4/5;border-radius:50%/42%;background:#111}
+.card h3{font:400 28px/1.1 var(--fd);margin:0 0 6px}
+.card .role{margin:0 0 14px;color:var(--gold);font-size:13px;letter-spacing:.06em}
+.card .fav{margin:0;font-size:14px;color:#e0d6bf}
+.card .fav i{display:block;margin-top:2px;color:var(--paper);font-size:15px}
+@media (max-width:480px){.card{grid-template-columns:1fr}.card .pic{max-width:190px}}
+
+#contacts{background:var(--sand);color:var(--umber);padding:0}
+.chero{position:relative;height:clamp(220px,34vw,420px);background:#3a1010}
+.chero canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.chero::after{content:"";position:absolute;inset:auto 0 0 0;height:40%;background:linear-gradient(0deg,var(--sand),rgba(220,200,173,0))}
+#contacts .lbl{color:var(--gold-deep)}
+#contacts h1{font:400 clamp(30px,5vw,70px)/1.02 var(--fd);margin:14px 0 14px;text-wrap:balance}
+#contacts .sub{font-style:italic;font-size:clamp(16px,2vw,21px);margin:0 0 clamp(40px,6vw,72px);color:#5a4630}
+.chan{padding:22px 0;border-top:1px solid rgba(42,29,16,.35)}
+.chan:last-child{border-bottom:1px solid rgba(42,29,16,.35)}
+.chan h3{font-size:11px;letter-spacing:.26em;text-transform:uppercase;font-weight:600;margin:0 0 8px;color:var(--gold-deep)}
+.chan .val{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;font:400 clamp(20px,2.4vw,28px)/1.2 var(--fd);overflow-wrap:anywhere}
+.chan .val a{text-decoration-color:var(--gold-deep);text-underline-offset:4px}
+.chan p{margin:8px 0 0;font-style:italic;color:#5a4630;max-width:46ch}
+.cp{cursor:pointer;font:500 11px var(--fb);letter-spacing:.14em;text-transform:uppercase;background:none;color:var(--umber);border:1px solid rgba(42,29,16,.5);padding:6px 12px}
+.cp:hover{background:var(--umber);color:var(--sand)}
+form.msg{background:rgba(255,255,255,.28);border:1px solid rgba(42,29,16,.35);padding:clamp(20px,3vw,40px);display:grid;gap:18px}
+form.msg h2{font:400 clamp(22px,2.4vw,30px)/1.15 var(--fd);margin:0}
+.fld{display:grid;gap:6px}
+.fld label{font-size:11px;letter-spacing:.22em;text-transform:uppercase;font-weight:600;color:#5a4630}
+.fld input,.fld select,.fld textarea{font:400 16px var(--fb);color:var(--umber);background:rgba(255,255,255,.55);border:1px solid rgba(42,29,16,.45);border-radius:0;padding:12px 14px;width:100%}
+.fld textarea{min-height:130px;resize:vertical}
+.send{cursor:pointer;font:500 12px var(--fb);letter-spacing:.34em;text-transform:uppercase;color:var(--gold);background:var(--forest);border:0;padding:17px 22px;outline:1px solid var(--gold-deep);outline-offset:-5px}
+.send:hover{background:#17382a}
+#fstat{margin:0;min-height:1.5em;font-size:14px;color:#5a4630}
+footer.foot{padding:28px max(16px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 28px) max(16px,env(safe-area-inset-left,0px));background:var(--umber);color:var(--muted);font-size:11px;letter-spacing:.22em;text-transform:uppercase;text-align:center}
+
+/* portrait phones: painting rises, text sits below it */
+@media (max-aspect-ratio:9/10){
+  .art{left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));width:auto;top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);max-height:46%;transform:translateY(calc((1 - var(--a,0)) * 18px))}
+  .art.r,.art.l{left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px))}
+  .hud span.rn{display:none}
+  .hero{width:100%;padding-top:80px}
+  .hint{display:none}
+}
+@media (prefers-reduced-motion:reduce){.enter{transition:none}}
+</style>
+
+<div id="loader"><div><span>ART REMAKE</span><small>Открываем залы</small></div></div>
+
+<header id="top">
+  <a class="brand" href="#" data-go="top">ART REMAKE</a>
+  <nav aria-label="Основное меню">
+    <a href="#" data-go="top"><b>01.</b>Галерея</a>
+    <a href="#manifest" data-go="manifest"><b>02.</b>Манифест</a>
+    <a href="#contacts" data-go="contacts"><b>03.</b>Контакты</a>
+  </nav>
+</header>
+
+<main id="track">
+  <div class="stage" id="stage">
+    <canvas id="gl" aria-label="Трёхмерная галерея ART REMAKE"></canvas>
+    <div class="vig"></div>
+    <div id="nogl" hidden>Для галереи нужен браузер с поддержкой WebGL.</div>
+
+    <section class="ov hero" id="ovHero">
+      <div class="kick">ПРОЕКТ ЦИФРОВОГО ПОСТМОДЕРНИЗМА</div>
+      <h1>К ЧЕРТУ ПЫЛЬНЫЕ МУЗЕИ</h1>
+      <p>«Art Remake — это место, где Мона Лиза пьет шампанское из бутылки, а девушка с жемчужной сережкой жует жвачку. Мы берем вековое искусство, стряхиваем с него патину времени и добавляем перца. Наш проект — это ироничный диалог между эпохами, где Ван Гог был бы рок-звездой, а Рафаэль создавал бы дизайн для Supreme. Это не осквернение, это эволюция. Мы делаем великое искусство доступным, живым и, да, немного скандальным.»</p>
+      <button class="enter" id="enterBtn" type="button">[ В Х О Д ]</button><span class="hint">↓ прокрутите вниз</span>
+    </section>
+
+    <section class="ov roomov" id="ovRoom">
+      <div class="kick" id="rTag"></div>
+      <h2 id="rH"></h2>
+      <p id="rSub"></p>
+    </section>
+
+    <section class="ov corr" id="ovCorr"><p id="cTxt"></p></section>
+
+    <article class="ov art r" id="ovArt">
+      <div class="inner" id="artIn">
+        <span class="no" id="aNo"></span>
+        <h3 id="aT"></h3>
+        <p class="hook" id="aH"></p>
+        <p class="desc" id="aD"></p>
+      </div>
+    </article>
+
+    <div class="hud" id="hud"><b id="hRoman"></b><span class="rn" id="hName"></span></div>
+    <div class="rail"><i id="rail"></i></div>
+  </div>
+</main>
+
+<section id="manifest" class="band">
+  <div class="wrap">
+    <div class="lbl">О нас</div>
+    <h1>МЫ НЕ РЕСТАВРИРУЕМ ПРОШЛОЕ. МЫ ЕГО ПЕРЕЗАПУСКАЕМ.</h1>
+    <p class="sub">История о том, как уважение к великим мастерам превратилось в эстетический бунт.</p>
+
+    <div class="cols">
+      <div class="body">
+        <h2>ПОЧЕМУ МЫ ЭТО ДЕЛАЕМ?</h2>
+        <p>«Классическое искусство заперли в стерильных музейных залах под трехслойным стеклом. Ему запретили дышать, шутить и реагировать на современность. Наш проект родился из простой мысли: если бы Леонардо да Винчи или Вермеер жили сегодня, они бы не писали скучные портреты. Они бы снимали вирусные ролики, делали коллабы с уличными брендами и создавали тренды. Мы лишь даем их шедеврам второй шанс ворваться в 21 век».</p>
+      </div>
+      <div class="gframe"><canvas id="mVisual" width="800" height="1000" aria-label="Девушка с жемчужной сережкой надувает жвачку"></canvas></div>
+    </div>
+
+    <div class="team">
+      <div class="cols">
+        <div>
+          <div class="lbl">Кураторы Хаоса</div>
+          <h2 style="margin-top:14px">КТО ЗА ЭТИМ СТОИТ</h2>
+        </div>
+        <article class="card">
+          <div class="pic"><canvas id="tPortrait" width="640" height="800" aria-label="Портрет Александры в стиле масляной живописи"></canvas></div>
+          <div>
+            <h3>Александра</h3>
+            <p class="role">Главный идеолог / Цифровой реставратор</p>
+            <p class="fav">Любимое произведение<i>«Девушка с жемчужиной жует жвачку»</i></p>
+          </div>
+        </article>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="contacts">
+  <div class="chero"><canvas id="cHero" width="1600" height="640" aria-label="Классический персонаж тянется к красному винтажному телефону"></canvas></div>
+  <div class="band" style="padding-top:clamp(24px,4vw,48px)">
+    <div class="wrap">
+      <div class="lbl">Контакты</div>
+      <h1>НА СВЯЗИ С КУРАТОРАМИ</h1>
+      <p class="sub">Отвечаем быстрее, чем высыхает масляная краска.</p>
+
+      <div class="cols" style="align-items:start">
+        <div>
+          <div class="chan">
+            <h3>Быстрые вопросы</h3>
+            <div class="val"><a href="https://t.me/ArtRemake_Support" target="_blank" rel="noopener">Telegram: @ArtRemake_Support</a><button class="cp" type="button" data-copy="@ArtRemake_Support">Скопировать</button></div>
+            <p>Отдел заботы и помощи с навигацией по галерее.</p>
+          </div>
+          <div class="chan">
+            <h3>Для художников и авторов</h3>
+            <div class="val"><span>art@artremake.io</span><button class="cp" type="button" data-copy="art@artremake.io">Скопировать</button></div>
+            <p>Присылайте свои портфолио. Мы всегда ищем новые таланты для коллабораций.</p>
+          </div>
+          <div class="chan">
+            <h3>B2B &amp; Партнерство</h3>
+            <div class="val"><span>partners@artremake.io</span><button class="cp" type="button" data-copy="partners@artremake.io">Скопировать</button></div>
+          </div>
+        </div>
+
+        <form class="msg" id="msgForm" novalidate>
+          <h2>ОСТАВИТЬ СООБЩЕНИЕ В ГАЛЕРЕЕ</h2>
+          <div class="fld"><label for="fName">Имя</label><input id="fName" name="name" type="text" autocomplete="name" required></div>
+          <div class="fld"><label for="fMail">Email</label><input id="fMail" name="email" type="email" autocomplete="email" required></div>
+          <div class="fld"><label for="fTopic">Тема</label>
+            <select id="fTopic" name="topic">
+              <option>Вопрос по проекту</option><option>Хочу коллаборацию</option><option>B2B</option><option>Просто выразить респект</option>
+            </select></div>
+          <div class="fld"><label for="fMsg">Сообщение</label><textarea id="fMsg" name="message" required></textarea></div>
+          <button class="send" type="submit">[ ОТПРАВИТЬ ПОСЛАНИЕ ]</button>
+          <p id="fstat" role="status"></p>
+        </form>
+      </div>
+    </div>
+  </div>
+  <footer class="foot">© ART REMAKE · проект цифрового постмодернизма</footer>
+</section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+'use strict';
+if(!window.THREE){document.getElementById('nogl').hidden=false;document.getElementById('nogl').textContent='Не удалось загрузить 3D-движок. Обновите страницу.';return;}
+const T=THREE, D=Math.PI/180;
+const clamp=(v,a=0,b=1)=>Math.min(b,Math.max(a,v));
+const sm=t=>t*t*t*(t*(t*6-15)+10);
+const lerp=(a,b,t)=>a+(b-a)*t;
+const $=id=>document.getElementById(id);
+
+/* ---------- exhibition content ---------- */
+const ROOMS=[
+ {roman:'I',  name:'Зал Знакомых Зеркал', h:'зал знакомых зеркал.', tag:'ПРОЕКТ ЦИФРОВОГО ПОСТМОДЕРНИЗМА', sub:'Разрушаем музейную тишину. Переосмысляем шедевры с 1500 года до эпохи TikTok.'},
+ {roman:'II', name:'Мнимые Хроники',      h:'мнимые хроники.',      tag:'ЗАЛ II', sub:''},
+ {roman:'III',name:'Зеркало Без Рамы',    h:'зеркало без рамы.',    tag:'ЗАЛ III', sub:''}
+];
+const ART=[
+ {room:0,shape:'rect',side:'L',draw:'p1',
+  title:`За ваше и наше искусство: Секретный вечер в пустом зале`,
+  hook:`Самая большая трагедия вечных шедевров — это их вечное заточение в рамах на соседних стенах. Они молча смотрят на толпы туристов сотни лет, но никогда не имели шанса поговорить. Мы просто стесали границы золоченых багетов и позволили двум главным женщинам в истории разделить один бокал на двоих.`,
+  desc:`В этом сюжете мы убираем вековую дистанцию и стерильность музейных правил. Когда гаснет свет и тяжелые засывы галереи закрываются до утра, начинается настоящая жизнь. Джоконда Леонардо — с её едва уловимой, чуть лукавой полуулыбкой — перестает играть роль неземной музы. В её движениях появляется вальяжная грация хозяйки вечера: она с легкой небрежностью склоняет темную бутылку прямо из своего полотна. Ниже, выходя из густой голландской тени, героиня Вермеера протягивает хрустальный бокал. Её нежный поворот головы, знаменитая жемчужина, ловящая блики светлого вина, и взволнованный, чуть приоткрытый рот создают удивительный контраст с хладнокровием Моны Лизы.`},
+ {room:0,shape:'oval',side:'R',draw:'p2',
+  title:`Секунда до того, как лопнет вечность: Дерзость во взгляде 1665 года`,
+  hook:`Вермеер ловил на холсте ускользающий свет и романтическую тоску. Мы же поймали момент лёгкого, сладкого бунта. Розовый шар жвачки зачеркивает века дистанции: перед нами не недосягаемый экспонат из учебника, а девушка, которая прямо сейчас смотрит на вас с вызовом.`,
+  desc:`Казалось бы, всё на месте: мягкий свет из высокого окна слева, изысканные складки тюрбана из синего и золотого шелка, влажный блеск знаменитой жемчужной капли в ухе. На старинном столике — фарфоровая ваза с белыми цветами, фаянсовая пиала с лимонами и корешки старинных фолиантов. Но вся эта безупречная барочная гармония мгновенно взрывается одной деталью — ярким, идеально круглым пузырем розовой баббл-гам.`},
+ {room:0,shape:'rect',side:'L',draw:'p3',
+  title:`Архитектура цифрового тумана: Когда голова переполнена шумом`,
+  hook:`В эпоху, когда поток информации не затихает ни на секунду, самым дефицитным чувством становится тишина. Этот холст — не просто оммаж сюрреализму, а честный портрет нашего современного состояния: когда ты одет строго по дресс-коду, но в голове бушует целое небо.`,
+  desc:`Перед нами элегантная, выдержанная в песочно-золотистых тонах работа, отсылающая к поэтике сюрреализма Магритта и стилистике середины XX века. Безупречный вельветовый пиджак, белоснежный воротник и аккуратно завязанный галстук говорят о человеке, который полностью собран, вписан в социум и готов к выполнению ежедневных задач. Однако там, где должно быть лицо, клубится густое, плотное кучевое облако, над которым нелепо и трогательно возвышается коричневая шляпа-котелок.`},
+ {room:1,shape:'oval',side:'R',draw:'p4',
+  title:`Спор о высшем разуме: Когда алгоритм встретил философию`,
+  hook:`Самые жаркие диспуты в истории разворачивались не на трибунах, а над открытыми книгами в тишине мраморных арок. Мы перенесли главный диалог нашего века — человека и созданного им разума — в декорации античного форума. Кто из них на самом деле обладает истиной, а кто лишь цитирует древние тексты?`,
+  desc:`На этом холсте, выдержанном в тёплых, словно подёрнутых патиной веков тонах классической живописи, разворачивается концептуальный философский поединок. Между ними на тяжелом деревянном столе лежат манускрипты — символы накопленной человечеством мудрости. Пространство ренессансной аркады на заднем плане погружает сцену в торжественную вечность. Это идеальная иллюстрация для второй комнаты нашей галереи: сюжет полностью современен по своей проблематике, но говорит с нами выразительным языком классической монументальной живописи.`},
+ {room:1,shape:'rect',side:'L',draw:'p5',
+  title:`Утренний эспрессо для музы: Когда новости важнее вечности`,
+  hook:`Мы привыкли видеть античные статуи возвышенными и холодными, стоящими на высоких пьедесталах в залах музеев. Но что если даже бессмертным музам нужен утренний кофе и свежая пресса, чтобы настроиться на новый день?`,
+  desc:`Эта работа безупречно балансирует на грани античной монументальности и уютной эстетики современного уличного кафе. Изваянная из благородного камня фигура с собранными в сложную прическу волосами склонилась над свежим выпуском газеты «DECANOVA». На развороте прессы — отпечатанный классический сюжет с ангелами, создание которого она разглядывает с погруженным, почти профессиональным интересом. Сюжет утягивает своей непринуждённостью. Он доказывает, что эстетика древности может быть не строгой и недоступной, а удивительно домашней, близкой и наполненной тонкой, изысканной иронией.`},
+ {room:1,shape:'oval',side:'R',draw:'p6',
+  title:`Лавандовый баббл-ти в Делфте XVII века`,
+  hook:`Знаменитая «Молочница» Вермеера четыре века проливала густое струящееся молоко в глиняный кувшин. Мы решили спросить: как выглядел бы этот повседневный тихий труд, если бы тренды современной поп-культуры проникли в голландскую кухню 1660 года?`,
+  desc:`Художественное пространство картины полностью сохраняет атмосферу золотого века голландской живописи: скромная кухня, мягкий свет из оконного переплёта слева, простая деревянная мебель, плетеная корзина с пышными хлебными булочками. Сама женщина одета в традиционный чепец, желтую кофту и синий фартук, а её лицо выражает ту же спокойную, медитативную сосредоточенность.`},
+ {room:2,shape:'rect',side:'L',draw:'p7',
+  title:`В поисках светлячка: Одиночество в толпе цифрового шума`,
+  hook:`Самое глубокое одиночество XXI века рождается не в пустых комнатах, а в самом центре движущегося мегаполиса. Мы окружены тысячами людей, но каждый из нас заперт в собственной персональной реальности.`,
+  desc:`Эта работа из нашей третьей комнаты передает главную драму современного человека — потерю связи с живым миром и тотальное цифровое отчуждение. Сюжет погружает нас в ритм вечернего города, где люди превратились в тени: их лица подсвечены одинаковым бледным сиянием экранов, а внимание приковано к бесконечным лентам новостей. И лишь один человек — с узнаваемым огненно-рыжим взглядом художника, умевшего видеть душу в подсолнухах и звёздных ночах, — вырывается из этого анабиоза. Он поднимает голову вверх, на мимолетное чудо: живую, светящуюся бабочку, парящую в вечернем воздухе. Картина передает тонкую надежду на то, что способность удивляться, чувствовать и просто поднять глаза от экрана — это единственный способ сохранить в себе человека среди шума и неоновых вывесок.`},
+ {room:2,shape:'oval',side:'R',draw:'p8',
+  title:`Поддельное тепло: Любовь к тому, что поддается счету`,
+  hook:`Что происходит с чувством, когда его главным мерилом становятся цифры на счетах и атрибуты успеха? Сюжет задает неудобный вопрос: кого мы обнимаем на самом деле — человека или его статус?`,
+  desc:`Эта глубокая эмоциональная работа передает трагедию подмены настоящих чувств материальным суррогатом. В технике глубокой светотени классического барокко разворачивается внешне интимный, но внутренне невероятно холодный момент. Девушка прижимается к своему партнеру с нежностью и страстью, но её избранник лишён человеческого тепла — его тело и лицо вытканы из плотной бумаги стодолларовых купюр. У него нет собственного голоса, искреннего взгляда или сердцебиения, он — лишь материальная оболочка. Холст передает острую социальную проблему современного общества потребителей: иллюзию любви, построенную на расчете.`},
+ {room:2,shape:'rect',side:'L',draw:'p9',
+  title:`Удобное послушание: Почему управлять проще теми, кто разучился думать`,
+  hook:`Настоящая свобода мысли — это роскошь, которую сложнее всего удержать. Гораздо безопаснее превратить общество в послушный хор марионеток, где каждый послушно дергает за ниточки чужих ожиданий, не задавая лишних вопросов.`,
+  desc:`Эта работа из третьей комнаты бьет точно по больной точке современного общества, обнажая простую и циничную истину: темными, упрощенными и бездумными массами управлять намного легче. В глубоких барочных тонах перед нами предстает триумф манипуляции. На возвышении восседает правитель в лавровом венке — символ тех, кто держит рычаги системы. С лёгкой, снисходительной усмешкой он перебирает тонкие нити, уходящие прямо в руки его марионеток. Одна кукла радостно и бессмысленно улыбается, исполняя чужую волю, а вторая — обессиленная и уставшая — склонила голову над ненужными больше книгами.`}
+];
+const TRANS=[
+ `Вы проходите в залы Мнимых Хроник. Здесь сюжеты полностью современны по своей проблематике, но говорят с нами выразительным языком классической монументальной живописи.`,
+ `Добро пожаловать в зал "Зеркало Без Рамы". Здесь мы вглядываемся в драмы и социальные реальности XXI века через глубокую светотень классического искусства.`
+];
+
+/* ---------- procedural paintings (stand-ins; swap for real images later) ---------- */
+let X;
+const cv=(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c;};
+const E=(cx,cy,rx,ry,f,rot=0)=>{X.save();X.translate(cx,cy);X.rotate(rot);X.beginPath();X.ellipse(0,0,rx,ry,0,0,Math.PI*2);X.fillStyle=f;X.fill();X.restore();};
+const Rc=(cx,cy,w,h,f,rot=0)=>{X.save();X.translate(cx,cy);X.rotate(rot);X.fillStyle=f;X.fillRect(-w/2,-h/2,w,h);X.restore();};
+const Pg=(pts,f)=>{X.beginPath();pts.forEach((p,i)=>i?X.lineTo(p[0],p[1]):X.moveTo(p[0],p[1]));X.closePath();X.fillStyle=f;X.fill();};
+const Ln=(pts,c,w)=>{X.beginPath();pts.forEach((p,i)=>i?X.lineTo(p[0],p[1]):X.moveTo(p[0],p[1]));X.strokeStyle=c;X.lineWidth=w;X.lineCap='round';X.lineJoin='round';X.stroke();};
+const Qd=(x0,y0,cx,cy,x1,y1,c,w)=>{X.beginPath();X.moveTo(x0,y0);X.quadraticCurveTo(cx,cy,x1,y1);X.strokeStyle=c;X.lineWidth=w;X.lineCap='round';X.stroke();};
+const Bg=(stops,H=1000)=>{const g=X.createLinearGradient(0,0,0,H);stops.forEach((s,i)=>g.addColorStop(i/(stops.length-1),s));X.fillStyle=g;X.fillRect(0,0,X.canvas.width,H);};
+const Gl=(cx,cy,r,rgb,a)=>{const g=X.createRadialGradient(cx,cy,0,cx,cy,r);g.addColorStop(0,`rgba(${rgb},${a})`);g.addColorStop(1,`rgba(${rgb},0)`);X.fillStyle=g;X.fillRect(cx-r,cy-r,2*r,2*r);};
+function paintify(){
+  const W=X.canvas.width,H=X.canvas.height,id=X.getImageData(0,0,W,H).data;
+  for(let i=0;i<Math.round(W*H/300);i++){
+    const px=Math.random()*W|0,py=Math.random()*H|0,k=(py*W+px)*4,a=-.7+(Math.random()-.5)*1.1,l=8+Math.random()*24;
+    X.strokeStyle=`rgba(${id[k]},${id[k+1]},${id[k+2]},.34)`;X.lineWidth=3+Math.random()*7;X.lineCap='round';
+    X.beginPath();X.moveTo(px,py);X.lineTo(px+Math.cos(a)*l,py+Math.sin(a)*l);X.stroke();
+  }
+  for(let i=0;i<7000;i++){X.fillStyle=Math.random()<.5?'rgba(255,238,200,.045)':'rgba(0,0,0,.055)';X.fillRect(Math.random()*W,Math.random()*H,2,2);}
+  const g=X.createRadialGradient(W/2,H/2,Math.min(W,H)*.28,W/2,H/2,Math.max(W,H)*.72);g.addColorStop(0,'rgba(24,12,0,0)');g.addColorStop(1,'rgba(24,12,0,.55)');
+  X.fillStyle=g;X.fillRect(0,0,W,H);
+  X.strokeStyle='rgba(30,16,6,.13)';X.lineWidth=.8;
+  for(let i=0;i<70;i++){let x=Math.random()*W,y=Math.random()*H;X.beginPath();X.moveTo(x,y);for(let j=0;j<7;j++){x+=(Math.random()-.5)*46;y+=(Math.random()-.5)*46;X.lineTo(x,y);}X.stroke();}
+}
+const DRAW={
+p1(){Bg(['#1a120c','#3b2a1a','#201710']);Gl(400,420,440,'255,190,110',.32);
+  Pg([[0,540],[140,480],[300,520],[470,460],[650,505],[800,470],[800,680],[0,680]],'rgba(66,84,66,.5)');
+  E(400,330,142,190,'#1b110a');E(400,340,80,102,'#dcb088');E(372,326,10,5,'#2a190d');E(428,326,10,5,'#2a190d');Ln([[374,392],[400,402],[428,390]],'#8a4a3a',4);
+  E(400,670,215,175,'#2a2016');Pg([[345,445],[455,445],[400,560]],'#dcb088');
+  E(600,590,40,150,'#2a2016',-.7);E(690,660,32,96,'#10201a',-1.15);Rc(736,630,24,54,'#10201a',-1.15);Qd(716,610,560,640,452,805,'#7a1230',5);
+  E(255,790,102,64,'#3f6fa8');E(244,748,68,54,'#e0b230');E(268,858,74,92,'#e4bd98');E(244,848,9,5,'#2a190d');E(292,848,9,5,'#2a190d');E(268,905,16,9,'#c0533f');
+  E(340,905,13,17,'#f6f1e6');E(285,1040,255,160,'#1d3a5c');
+  E(452,880,46,26,'rgba(225,238,255,.55)');Rc(452,945,8,74,'rgba(225,238,255,.5)');E(452,874,33,12,'#8a1530');},
+p2(){Bg(['#0e0b09','#2a2218','#17120d']);Gl(110,320,430,'255,226,160',.42);
+  Rc(130,930,240,150,'#2b1d10');E(120,820,58,76,'#e8e4dc');E(95,730,26,28,'#f4f0e6');E(140,716,24,26,'#f4f0e6');E(118,690,22,24,'#f4f0e6');
+  E(650,950,66,36,'#e8e0cf');E(630,925,24,18,'#e6c23a');E(670,928,24,18,'#e6c23a');
+  E(400,255,155,122,'#2f5fa8');Rc(430,310,270,76,'#e4b937',-.45);E(560,430,50,126,'#e4b937',.28);
+  E(395,480,126,152,'#e9c4a2');E(462,490,66,140,'rgba(120,70,40,.28)');
+  E(345,455,17,10,'#fff');E(445,455,17,10,'#fff');E(347,456,8,8,'#1b1410');E(447,456,8,8,'#1b1410');
+  Ln([[320,425],[372,420]],'#3a2514',4);Ln([[420,420],[472,425]],'#3a2514',4);
+  E(398,568,36,15,'#c0533f');
+  E(462,606,76,76,'#f58fb5');E(440,580,19,12,'rgba(255,255,255,.6)');
+  E(285,572,22,28,'#f6f1e6');E(279,562,6,8,'rgba(255,255,255,.75)');
+  E(395,900,270,200,'#7a4d24');Pg([[300,730],[490,730],[395,830]],'#efe8d8');},
+p3(){Bg(['#e1c58a','#cfa766','#b78d4f']);Rc(400,760,800,6,'rgba(120,80,30,.35)');
+  Pg([[110,1000],[190,730],[330,650],[470,650],[610,730],[690,1000]],'#6b4a2a');
+  Pg([[350,650],[450,650],[400,770]],'#f5f0e6');Pg([[388,712],[412,712],[422,830],[400,862],[378,830]],'#7a2d2d');
+  E(300,520,84,72,'#cfc9bc');E(500,525,88,76,'#cfc9bc');E(400,500,120,98,'#cfc9bc');
+  E(322,498,82,70,'#f4f1ea');E(488,500,86,74,'#f4f1ea');E(400,470,118,94,'#f7f4ee');E(350,420,80,66,'#f7f4ee');E(452,420,82,68,'#f7f4ee');
+  E(400,332,106,70,'#4a2d17');E(400,376,176,24,'#4a2d17');E(400,364,98,10,'#2c1a0d');},
+p4(){Bg(['#2a1d12','#4a3420','#2a1d12']);
+  [[110,300],[400,300],[690,300]].forEach(a=>{Pg([[a[0]-110,780],[a[0]-110,a[1]+70],[a[0]+110,a[1]+70],[a[0]+110,780]],'#8f6e42');X.beginPath();X.arc(a[0],a[1]+70,110,Math.PI,0);X.fillStyle='#8f6e42';X.fill();
+    Pg([[a[0]-70,780],[a[0]-70,a[1]+90],[a[0]+70,a[1]+90],[a[0]+70,780]],'#33230f');X.beginPath();X.arc(a[0],a[1]+90,70,Math.PI,0);X.fillStyle='#33230f';X.fill();});
+  Gl(400,520,360,'255,200,120',.28);
+  E(225,430,58,72,'#d8b08a');E(225,505,50,42,'#cfc8b8');E(225,690,148,240,'#9b3c2c');
+  Rc(570,430,116,124,'#5f7a8a');E(538,430,13,13,'#9ff6ff');E(602,430,13,13,'#9ff6ff');Ln([[540,478],[600,478]],'#9ff6ff',4);
+  Rc(570,690,160,250,'#43606e');Ln([[510,620],[560,620],[560,700],[630,700]],'#9ff6ff',3);Ln([[520,780],[580,780],[580,740]],'#9ff6ff',3);
+  Rc(400,830,700,86,'#4a2e18');Rc(310,786,130,16,'#e9dcb8',-.08);Rc(500,784,140,16,'#e1d3a8',.06);Rc(400,772,120,14,'#c7b283');},
+p5(){Bg(['#22332e','#344a41','#1d2a25']);Gl(660,260,330,'255,226,160',.35);Rc(670,230,150,220,'rgba(255,230,170,.18)');
+  E(400,250,92,66,'#bdb7aa');E(400,206,50,40,'#c6c0b3');E(400,400,98,124,'#d8d2c6');E(430,420,48,108,'rgba(110,100,86,.28)');
+  Rc(400,510,60,70,'#cfc9bc');E(400,740,260,260,'#d6d0c3');Ln([[300,610],[330,760],[300,900]],'rgba(120,110,95,.35)',8);Ln([[500,610],[480,760],[510,900]],'rgba(120,110,95,.35)',8);
+  Rc(400,880,430,230,'#efe9da',-.07);
+  X.save();X.translate(400,832);X.rotate(-.07);X.fillStyle='#2a2016';X.font='700 46px Oranienbaum, serif';X.textAlign='center';X.fillText('DECANOVA',0,0);X.restore();
+  Rc(400,870,330,3,'rgba(40,30,20,.6)',-.07);E(330,912,34,26,'rgba(150,130,100,.5)');E(470,904,34,26,'rgba(150,130,100,.5)');
+  E(690,930,58,26,'#f3efe6');Rc(690,905,84,48,'#f3efe6');E(690,884,38,12,'#3a2210');},
+p6(){Bg(['#1d140d','#3a2918','#24190f']);Gl(120,300,420,'255,230,170',.4);Rc(120,300,110,300,'rgba(255,240,200,.22)');
+  Rc(400,950,800,140,'#4a3220');E(660,880,90,46,'#a8742f');E(630,850,36,24,'#d9a45a');E(690,846,36,24,'#d9a45a');E(660,832,34,22,'#e0b06a');
+  E(430,325,100,86,'#efe9dc');E(436,390,70,86,'#e0b996');E(410,385,8,5,'#2a190d');E(458,385,8,5,'#2a190d');Ln([[418,430],[436,438],[454,430]],'#a85a44',4);
+  E(436,660,170,240,'#e0a82a');E(436,830,185,200,'#3a64a8');
+  Pg([[360,760],[500,760],[520,990],[340,990]],'rgba(225,215,250,.6)');Pg([[366,830],[494,830],[510,980],[350,980]],'#b99be0');Rc(470,700,8,170,'#5a3b8a',.1);
+  for(let i=0;i<22;i++)E(360+Math.random()*130,940+Math.random()*40,9,9,'#1a1008');},
+p7(){Bg(['#0b1230','#18285a','#2a2049']);Gl(150,330,260,'255,60,150',.4);Gl(660,380,280,'60,220,255',.35);
+  Rc(140,240,180,120,'rgba(255,70,150,.45)');Rc(670,300,150,200,'rgba(60,220,255,.35)');
+  for(let i=0;i<9;i++){const x=40+i*90;E(x,700+(i%2)*20,36,42,'#0c0f1c');E(x,860,56,160,'#0c0f1c');Rc(x,780,26,34,'#a9d0ff');}
+  E(400,430,86,100,'#e0561a');E(400,478,62,80,'#e6c1a0');E(400,568,48,40,'#d0431a');E(375,462,9,6,'#2a1a10');E(425,462,9,6,'#2a1a10');
+  E(400,830,160,230,'#243b6a');Pg([[360,600],[440,600],[420,680],[380,680]],'#1b2d52');
+  Gl(560,230,170,'190,255,170',.55);E(540,236,52,26,'#c9ffbf',-.7);E(582,224,52,26,'#c9ffbf',.7);E(560,236,5,26,'#2a3a22');},
+p8(){Bg(['#120c09','#2b1810','#190f0a']);Gl(400,420,380,'255,170,110',.26);
+  E(300,380,102,110,'#2a1810');E(300,432,72,92,'#e8c3a4');E(280,424,8,5,'#2a190d');E(325,424,8,5,'#2a190d');E(302,470,16,7,'#b8503e');E(300,820,185,300,'#a02a3a');
+  E(530,420,86,106,'#86a874');E(530,820,190,320,'#6f9660');
+  for(let r=0;r<12;r++)for(let c=0;c<5;c++){const bx=430+c*52+(r%2)*14,by=360+r*52;if(by>1000)continue;X.fillStyle=(r+c)%2?'#8fb27d':'#7ca06a';X.fillRect(bx,by,48,24);X.strokeStyle='rgba(30,60,30,.5)';X.lineWidth=1;X.strokeRect(bx,by,48,24);}
+  X.fillStyle='rgba(20,50,20,.7)';X.font='700 22px Oranienbaum, serif';X.textAlign='center';X.fillText('100',530,450);X.fillText('100',520,720);
+  E(405,640,36,100,'#a02a3a',-1.2);E(410,700,22,70,'#e8c3a4',-1.3);},
+p9(){Bg(['#4a1212','#5e1a1a','#2a0a0a']);Pg([[0,0],[260,0],[120,700],[0,760]],'rgba(120,30,30,.55)');Pg([[800,0],[540,0],[680,700],[800,760]],'rgba(120,30,30,.55)');
+  Rc(400,560,330,680,'#8a6a1e');Rc(400,300,260,110,'#a8841f');
+  E(400,330,72,90,'#d9ae88');X.beginPath();X.arc(400,300,96,Math.PI*.9,Math.PI*2.1);X.strokeStyle='#4f7a2d';X.lineWidth=16;X.stroke();
+  E(380,330,8,5,'#2a190d');E(422,330,8,5,'#2a190d');Ln([[376,372],[402,382],[432,366]],'#8a4a3a',5);
+  E(400,560,176,230,'#6a1f6a');E(300,600,22,70,'#6a1f6a',.5);E(500,600,22,70,'#6a1f6a',-.5);E(260,640,16,16,'#d9ae88');E(540,640,16,16,'#d9ae88');
+  Ln([[260,650],[236,780]],'#efe4bd',2);Ln([[250,650],[250,790]],'#efe4bd',2);Ln([[540,650],[566,780]],'#efe4bd',2);Ln([[550,650],[556,800]],'#efe4bd',2);
+  E(240,830,36,42,'#e5c9a8');E(228,822,5,5,'#2a190d');E(252,822,5,5,'#2a190d');Qd(226,842,240,856,256,842,'#8a4a3a',3);Rc(240,920,70,110,'#3b6aa0');
+  E(560,850,36,42,'#e5c9a8',.45);Rc(560,930,70,100,'#4a4a6a',.15);Rc(590,970,76,22,'#e9dcb8',.2);},
+portrait(){Bg(['#120c08','#2a1a10','#0e0906']);Gl(300,260,380,'255,200,140',.3);
+  E(320,880,300,240,'#7a1620');Pg([[220,700],[420,700],[320,830]],'#e3b896');E(320,620,36,90,'#e3b896');
+  E(320,330,170,230,'#2a160c');E(320,380,112,142,'#e8c3a4');E(280,365,15,8,'#fff');E(360,365,15,8,'#fff');E(282,366,7,7,'#2a1a10');E(362,366,7,7,'#2a1a10');
+  Ln([[250,338],[304,334]],'#2a160c',4);Ln([[338,334],[392,338]],'#2a160c',4);Qd(290,455,320,472,352,452,'#b8503e',6);
+  Ln([[320,300],[320,250]],'#1a0e07',5);X.beginPath();X.arc(320,720,62,.2,Math.PI-.2);X.strokeStyle='#e0b94a';X.lineWidth=6;X.stroke();E(320,782,10,10,'#e0b94a');},
+phone(){Bg(['#3a0c0c','#5a1414','#2a0808'],640);Gl(1100,300,520,'255,190,120',.35);
+  E(420,360,150,190,'#2a160c');E(430,390,98,128,'#e0bd9c');E(398,372,10,6,'#2a190d');E(460,372,10,6,'#2a190d');Ln([[400,438],[430,448],[462,436]],'#8a4a3a',5);
+  Pg([[200,640],[260,520],[600,520],[680,640]],'#d8d2c6');Pg([[560,540],[760,500],[960,430],[1020,470],[780,580],[590,610]],'#d8d2c6');E(1030,448,30,26,'#d8d2c6',.4);
+  Rc(1180,500,300,150,'#b81d24');E(1180,420,150,64,'#b81d24');Rc(1180,590,330,40,'#8f1218');
+  E(1180,380,64,18,'#6a0c10');Rc(1130,360,100,26,'#8f1218',-.2);E(1090,372,26,22,'#e8e1d0');E(1270,350,26,22,'#e8e1d0');
+  Qd(1330,520,1450,480,1410,610,'#2a1a14',5);},
+};
+function mkPaint(fn,w=800,h=1000){const c=cv(w,h);X=c.getContext('2d');DRAW[fn]();paintify();return c;}
+
+/* ---------- renderer & scene ---------- */
+const stage=$('stage'),canvas=$('gl');
+let renderer;
+try{renderer=new T.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});}
+catch(e){$('nogl').hidden=false;$('loader').classList.add('gone');return;}
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.75));
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;renderer.shadowMap.autoUpdate=false;
+const scene=new T.Scene();
+scene.fog=new T.Fog(0x0a0807,34,170);
+const camera=new T.PerspectiveCamera(50,1,.1,400);
+
+const R=9,WH=6.5,DOOR=R*Math.cos(10*D),CHORD=2*R*Math.sin(10*D),SPRING=2.7,ARTR=8.78;
+const dirV=t=>new T.Vector3(Math.sin(t),0,-Math.cos(t));
+const rep=(t,x,y)=>{t.wrapS=t.wrapT=T.RepeatWrapping;t.repeat.set(x,y);t.anisotropy=4;return t;};
+
+/* environment for gold */
+function envTex(){const c=cv(512,256),x=c.getContext('2d');const g=x.createLinearGradient(0,0,0,256);g.addColorStop(0,'#3a3026');g.addColorStop(.5,'#9a7a4a');g.addColorStop(1,'#1a120a');x.fillStyle=g;x.fillRect(0,0,512,256);
+  x.fillStyle='#fff3d0';[[60,70,70,26],[200,50,90,20],[340,80,60,30],[450,60,50,22]].forEach(r=>x.fillRect(r[0],r[1],r[2],r[3]));
+  const t=new T.CanvasTexture(c);t.mapping=T.EquirectangularReflectionMapping;const pm=new T.PMREMGenerator(renderer);const e=pm.fromEquirectangular(t).texture;pm.dispose();return e;}
+const goldMat=new T.MeshStandardMaterial({color:0xD4AF37,metalness:1,roughness:.3,envMap:envTex(),envMapIntensity:1.25});
+const brassMat=new T.MeshStandardMaterial({color:0x9a7a2a,metalness:.9,roughness:.4,envMap:goldMat.envMap});
+
+/* ---------- textures ---------- */
+function band(x,y,h,l,d){const g=x.createLinearGradient(0,y,0,y+h);g.addColorStop(0,l);g.addColorStop(1,d);x.fillStyle=g;x.fillRect(0,y,256,h);}
+function wallTex(){const c=cv(256,1024),x=c.getContext('2d');x.fillStyle='#ece8de';x.fillRect(0,0,256,1024);
+  for(let i=0;i<256;i+=10){x.fillStyle='rgba(0,0,0,.022)';x.fillRect(i,0,5,1024);}
+  band(x,0,28,'#faf7ef','#b9b2a2');band(x,62,10,'#f4f0e6','#c4bdad');
+  band(x,760,26,'#fbf8f0','#a9a292');x.fillStyle='rgba(0,0,0,.2)';x.fillRect(0,786,256,6);
+  x.fillStyle='#d6d1c4';x.fillRect(0,792,256,192);
+  x.fillStyle='#e6e1d5';x.fillRect(20,820,216,140);
+  x.fillStyle='rgba(255,255,255,.85)';x.fillRect(20,820,216,4);x.fillRect(20,820,4,140);
+  x.fillStyle='rgba(0,0,0,.28)';x.fillRect(20,956,216,4);x.fillRect(232,820,4,140);
+  x.strokeStyle='rgba(0,0,0,.18)';x.lineWidth=2;x.strokeRect(40,840,176,100);
+  band(x,984,40,'#f1ede2','#a39c8c');
+  const t=new T.CanvasTexture(c);t.anisotropy=4;return t;}
+function parquet(){const c=cv(512,512),x=c.getContext('2d');x.fillStyle='#3a2616';x.fillRect(0,0,512,512);
+  for(let r=0;r<16;r++)for(let i=0;i<5;i++){const off=(r%2)*51,bx=i*102-off,by=r*32,v=40+Math.random()*34|0;x.fillStyle=`rgb(${v+34},${v+8},${v-6})`;x.fillRect(bx+1,by+1,100,30);x.fillStyle='rgba(255,220,160,.05)';x.fillRect(bx+1,by+1,100,3);}
+  return rep(new T.CanvasTexture(c),7,7);}
+function marble(){const c=cv(256,256),x=c.getContext('2d');for(let i=0;i<2;i++)for(let j=0;j<2;j++){x.fillStyle=(i+j)%2?'#2b2622':'#b9ae9a';x.fillRect(i*128,j*128,128,128);}
+  for(let i=0;i<500;i++){x.fillStyle='rgba(255,255,255,.04)';x.fillRect(Math.random()*256,Math.random()*256,2,2);}return rep(new T.CanvasTexture(c),2,6);}
+function stoneTex(){const c=cv(256,256),x=c.getContext('2d');x.fillStyle='#8a7e68';x.fillRect(0,0,256,256);
+  for(let r=0;r<4;r++)for(let i=-1;i<3;i++){const bx=i*128+(r%2)*64,v=205+Math.random()*30|0;x.fillStyle=`rgb(${v},${v-9},${v-28})`;x.fillRect(bx+3,r*64+3,122,58);}
+  for(let i=0;i<2600;i++){x.fillStyle=Math.random()<.5?'rgba(0,0,0,.05)':'rgba(255,255,255,.05)';x.fillRect(Math.random()*256,Math.random()*256,2,2);}
+  return rep(new T.CanvasTexture(c),.25,.25);}
+function cobble(){const c=cv(256,256),x=c.getContext('2d');x.fillStyle='#17130f';x.fillRect(0,0,256,256);
+  for(let r=0;r<8;r++)for(let i=0;i<8;i++){const v=44+Math.random()*30|0;x.fillStyle=`rgb(${v},${v-3},${v-8})`;x.beginPath();x.ellipse(i*32+16+(r%2)*10,r*32+16,14,12,0,0,7);x.fill();}
+  return rep(new T.CanvasTexture(c),60,60);}
+function doorTex(){const c=cv(256,512),x=c.getContext('2d');x.fillStyle='#2a190e';x.fillRect(0,0,256,512);
+  for(let i=0;i<256;i+=4){x.fillStyle=`rgba(255,200,140,${Math.random()*.05})`;x.fillRect(i,0,2,512);}
+  [[24,24,208,200],[24,244,208,244]].forEach(p=>{x.fillStyle='#3a2314';x.fillRect(p[0],p[1],p[2],p[3]);x.strokeStyle='#d4af37';x.lineWidth=3;x.strokeRect(p[0]+10,p[1]+10,p[2]-20,p[3]-20);x.strokeStyle='rgba(0,0,0,.5)';x.lineWidth=2;x.strokeRect(p[0],p[1],p[2],p[3]);});
+  x.fillStyle='#d4af37';x.beginPath();x.arc(214,260,9,0,7);x.fill();return new T.CanvasTexture(c);}
+function friezeTex(){const c=cv(1024,96),x=c.getContext('2d');x.fillStyle='#17110b';x.fillRect(0,0,1024,96);x.strokeStyle='#d4af37';x.lineWidth=2;x.strokeRect(6,6,1012,84);
+  x.fillStyle='#d4af37';x.font='56px Oranienbaum, Georgia, serif';x.textAlign='center';x.textBaseline='middle';
+  if('letterSpacing' in x)x.letterSpacing='18px';x.fillText('ART REMAKE',512+9,50);return new T.CanvasTexture(c);}
+function skyTex(){const c=cv(16,512),x=c.getContext('2d');const g=x.createLinearGradient(0,0,0,512);g.addColorStop(0,'#070b18');g.addColorStop(.55,'#1c2340');g.addColorStop(.85,'#4a3036');g.addColorStop(1,'#6a4630');x.fillStyle=g;x.fillRect(0,0,16,512);return new T.CanvasTexture(c);}
+scene.background=skyTex();
+
+/* ---------- geometry helpers ---------- */
+function archWall(w,h,hw,spring){
+  const s=new T.Shape();s.moveTo(-w/2,-.5);s.lineTo(w/2,-.5);s.lineTo(w/2,h);s.lineTo(-w/2,h);s.closePath();
+  const r=hw/2,p=new T.Path();p.moveTo(-r,-.2);p.lineTo(-r,spring);p.absarc(0,spring,r,Math.PI,0,true);p.lineTo(r,-.2);p.closePath();s.holes.push(p);return s;}
+
+function buildRoom(cfg,idx){
+  const g=new T.Group();g.position.set(cfg.cx,0,cfg.cz);scene.add(g);
+  const wt=wallTex(),N=36,segW=2*R*Math.sin(5*D),rad=R*Math.cos(5*D);
+  const olive=new T.Color(0x6D6F30),green=new T.Color(0x235135);
+  const tint=th=>cfg.grad?olive.clone().lerp(green,(1-Math.cos(th))/2):new T.Color(cfg.col);
+  const segGeo=new T.PlaneGeometry(segW,WH);
+  for(let i=0;i<N;i++){const deg=5+10*i;if(cfg.doors.some(d=>Math.abs(deg-d)<=5.01))continue;const th=deg*D;
+    const m=new T.Mesh(segGeo,new T.MeshStandardMaterial({map:wt,color:tint(th),roughness:.92}));
+    m.position.set(Math.sin(th)*rad,WH/2,-Math.cos(th)*rad);m.rotation.y=-th;m.receiveShadow=true;g.add(m);}
+  cfg.doors.forEach(d=>{const th=d*D;const geo=new T.ShapeGeometry(archWall(CHORD+.5,WH,CHORD,SPRING),32);
+    const m=new T.Mesh(geo,new T.MeshStandardMaterial({map:wt,color:tint(th),roughness:.92}));
+    m.position.set(Math.sin(th)*DOOR,0,-Math.cos(th)*DOOR);m.rotation.y=-th;g.add(m);});
+  const fl=new T.Mesh(new T.CircleGeometry(R+.2,64),new T.MeshStandardMaterial({map:parquet(),roughness:.5,metalness:.08}));fl.rotation.x=-Math.PI/2;fl.position.y=.01;fl.receiveShadow=true;g.add(fl);
+  const ring=new T.Mesh(new T.RingGeometry(1.1,1.35,64),new T.MeshStandardMaterial({color:0xb8913a,metalness:.7,roughness:.4}));ring.rotation.x=-Math.PI/2;ring.position.y=.02;g.add(ring);
+  const ceilC=(cfg.grad?olive.clone().lerp(green,.5):new T.Color(cfg.col)).multiplyScalar(.55);
+  const ce=new T.Mesh(new T.CircleGeometry(R+.2,48),new T.MeshStandardMaterial({color:ceilC,roughness:1,side:T.DoubleSide}));ce.rotation.x=Math.PI/2;ce.position.y=WH;g.add(ce);
+  const med=new T.Mesh(new T.CircleGeometry(3.2,48),new T.MeshStandardMaterial({color:ceilC.clone().multiplyScalar(1.5),roughness:1}));med.rotation.x=Math.PI/2;med.position.y=WH-.02;g.add(med);
+  const pl=new T.PointLight(0xffe0b0,.6,24,1.5);pl.position.set(0,5.4,0);g.add(pl);
+  return {g,tint};
+}
+function buildCorridor(cx,cz,len,rotY,stone){
+  const g=new T.Group();g.position.set(cx,0,cz);g.rotation.y=rotY;scene.add(g);
+  const w=CHORD,r=w/2;
+  const wm=new T.MeshStandardMaterial({color:stone?0xa59680:0x8c7c68,roughness:.95,side:T.DoubleSide});
+  [-1,1].forEach(s=>{const p=new T.Mesh(new T.PlaneGeometry(len,SPRING),wm);p.rotation.y=s*Math.PI/2;p.position.set(s*r,SPRING/2,0);g.add(p);});
+  const vg=new T.CylinderGeometry(r,r,len,28,1,true,Math.PI/2,Math.PI);vg.rotateX(Math.PI/2);
+  const v=new T.Mesh(vg,new T.MeshStandardMaterial({color:0x7c6c58,roughness:1,side:T.DoubleSide}));v.position.y=SPRING;g.add(v);
+  const ft=marble();ft.repeat.set(1,Math.max(2,len/1.5));
+  const f=new T.Mesh(new T.PlaneGeometry(w,len),new T.MeshStandardMaterial({map:ft,roughness:.35,metalness:.1}));f.rotation.x=-Math.PI/2;f.position.y=.012;f.receiveShadow=true;g.add(f);
+  for(let z=-len/2+1;z<len/2;z+=2){const rib=new T.Mesh(new T.TorusGeometry(r,.07,8,28,Math.PI),brassMat);rib.position.set(0,SPRING,z);g.add(rib);}
+  const lan=new T.Mesh(new T.SphereGeometry(.13,12,10),new T.MeshBasicMaterial({color:0xffd9a0}));lan.position.set(0,3.55,0);g.add(lan);
+  const l=new T.PointLight(0xffb870,.9,11,1.6);l.position.set(0,3.4,0);g.add(l);
+  return g;
+}
+
+function ring(kind,ow,oh,iw,ih,depth){
+  const s=new T.Shape(),h=new T.Path();
+  if(kind==='rect'){s.moveTo(-ow/2,-oh/2);s.lineTo(ow/2,-oh/2);s.lineTo(ow/2,oh/2);s.lineTo(-ow/2,oh/2);s.closePath();
+    h.moveTo(-iw/2,-ih/2);h.lineTo(iw/2,-ih/2);h.lineTo(iw/2,ih/2);h.lineTo(-iw/2,ih/2);h.closePath();}
+  else{s.absellipse(0,0,ow/2,oh/2,0,Math.PI*2,false,0);h.absellipse(0,0,iw/2,ih/2,0,Math.PI*2,true,0);}
+  s.holes.push(h);
+  return new T.ExtrudeGeometry(s,{depth,bevelEnabled:true,bevelThickness:.022,bevelSize:.022,bevelSegments:2,curveSegments:44});
+}
+function beads(kind,bw,bh,z){
+  const pts=[];
+  if(kind==='rect'){[[-bw/2,-bh/2,bw/2,-bh/2],[bw/2,-bh/2,bw/2,bh/2],[bw/2,bh/2,-bw/2,bh/2],[-bw/2,bh/2,-bw/2,-bh/2]].forEach(e=>{const L=Math.hypot(e[2]-e[0],e[3]-e[1]),n=Math.round(L/.17);for(let i=0;i<n;i++){const t=i/n;pts.push([e[0]+(e[2]-e[0])*t,e[1]+(e[3]-e[1])*t]);}});}
+  else{const n=68;for(let i=0;i<n;i++){const a=i/n*Math.PI*2;pts.push([Math.cos(a)*bw/2,Math.sin(a)*bh/2]);}}
+  const im=new T.InstancedMesh(new T.SphereGeometry(.036,8,6),goldMat,pts.length),o=new T.Object3D();
+  pts.forEach((p,i)=>{o.position.set(p[0],p[1],z);o.updateMatrix();im.setMatrixAt(i,o.matrix);});return im;
+}
+function frameMesh(kind,pw,ph,tex){
+  const g=new T.Group(),f=.36,add=(geo,z)=>{const m=new T.Mesh(geo,goldMat);m.position.z=z;m.castShadow=true;m.receiveShadow=true;g.add(m);};
+  add(ring(kind,pw+2*f,ph+2*f,pw+f*.78,ph+f*.78,.10),0);
+  add(ring(kind,pw+2*f,ph+2*f,pw+2*f-.1,ph+2*f-.1,.19),0);
+  add(ring(kind,pw+f*.86,ph+f*.86,pw-.05,ph-.05,.24),0);
+  g.add(beads(kind,pw+f*1.12,ph+f*1.12,.14));
+  const cs=[[0,ph/2+f*.95],[0,-ph/2-f*.95]];if(kind==='rect')cs.push([pw/2+f*.95,ph/2+f*.95],[-pw/2-f*.95,ph/2+f*.95],[pw/2+f*.95,-ph/2-f*.95],[-pw/2-f*.95,-ph/2-f*.95]);
+  cs.forEach(p=>{const m=new T.Mesh(new T.SphereGeometry(.1,14,10),goldMat);m.scale.z=.7;m.position.set(p[0],p[1],.2);m.castShadow=true;g.add(m);});
+  const pic=new T.Mesh(new T.PlaneGeometry(pw,ph),new T.MeshStandardMaterial({map:tex,roughness:.75,emissive:0xffffff,emissiveMap:tex,emissiveIntensity:.17}));pic.position.z=.04;g.add(pic);
+  return g;
+}
+
+/* ---------- exterior ---------- */
+const stoneMat=new T.MeshStandardMaterial({map:stoneTex(),color:0xcbbda2,roughness:.95});
+const lightStone=new T.MeshStandardMaterial({color:0xd8cdb4,roughness:.9});
+(function exterior(){
+  const ground=new T.Mesh(new T.PlaneGeometry(260,260),new T.MeshStandardMaterial({map:cobble(),roughness:.9}));ground.rotation.x=-Math.PI/2;ground.position.y=-.02;ground.receiveShadow=true;scene.add(ground);
+  const sh=archWall(40,15,CHORD,4.2);const fac=new T.Mesh(new T.ExtrudeGeometry(sh,{depth:1,bevelEnabled:false,curveSegments:32}),stoneMat);fac.position.z=-1;scene.add(fac);
+  const rs=new T.Shape();rs.moveTo(-2.9,-.3);rs.lineTo(2.9,-.3);rs.lineTo(2.9,5);rs.absarc(0,5,2.9,0,Math.PI,false);rs.lineTo(-2.9,-.3);
+  const rh=new T.Path();rh.moveTo(-CHORD/2,-.5);rh.lineTo(-CHORD/2,4.2);rh.absarc(0,4.2,CHORD/2,Math.PI,0,true);rh.lineTo(CHORD/2,-.5);rh.closePath();rs.holes.push(rh);
+  const surround=new T.Mesh(new T.ExtrudeGeometry(rs,{depth:.5,bevelEnabled:true,bevelThickness:.05,bevelSize:.05,bevelSegments:2,curveSegments:40}),lightStone);scene.add(surround);
+  [-1,1].forEach(s=>{
+    const col=new T.Mesh(new T.CylinderGeometry(.46,.5,9,24),lightStone);col.position.set(s*4.1,4.8,1.5);scene.add(col);
+    const cap=new T.Mesh(new T.BoxGeometry(1.3,.35,1.3),lightStone);cap.position.set(s*4.1,9.4,1.5);scene.add(cap);
+    const base=new T.Mesh(new T.BoxGeometry(1.2,.4,1.2),lightStone);base.position.set(s*4.1,.5,1.5);scene.add(base);
+    [3.4,7.6].forEach(y=>[-1,1].forEach(()=>{}));
+    [-17,-13,-9].forEach((x0)=>{const x=s<0?x0:-x0;[3.4,8].forEach(y=>{
+      const fr=new T.Mesh(new T.BoxGeometry(2.1,3.1,.16),lightStone);fr.position.set(x,y,.08);scene.add(fr);
+      const wi=new T.Mesh(new T.PlaneGeometry(1.6,2.6),new T.MeshBasicMaterial({color:0xffcf86}));wi.position.set(x,y,.17);scene.add(wi);
+      const bar=new T.Mesh(new T.BoxGeometry(.06,2.6,.04),new T.MeshBasicMaterial({color:0x3a2a18}));bar.position.set(x,y,.2);scene.add(bar);});});
+    const lampPost=new T.Mesh(new T.CylinderGeometry(.06,.09,3.4,10),brassMat);lampPost.position.set(s*6.6,1.7,4.2);scene.add(lampPost);
+    const lamp=new T.Mesh(new T.SphereGeometry(.24,14,10),new T.MeshBasicMaterial({color:0xffd9a0}));lamp.position.set(s*6.6,3.6,4.2);scene.add(lamp);
+    const pl=new T.PointLight(0xffc27a,1.15,24,1.6);pl.position.set(s*6.6,3.4,4.2);scene.add(pl);
+  });
+  const ent=new T.Mesh(new T.BoxGeometry(11,1.3,2.5),lightStone);ent.position.set(0,10.05,1.15);scene.add(ent);
+  const fr=new T.Mesh(new T.PlaneGeometry(9.6,.9),new T.MeshBasicMaterial({map:friezeTex()}));fr.position.set(0,10.05,2.42);scene.add(fr);
+  const ps=new T.Shape();ps.moveTo(-5.9,0);ps.lineTo(5.9,0);ps.lineTo(0,2.7);ps.closePath();
+  const ped=new T.Mesh(new T.ExtrudeGeometry(ps,{depth:2,bevelEnabled:false}),lightStone);ped.position.set(0,10.7,.1);scene.add(ped);
+  const cor=new T.Mesh(new T.BoxGeometry(41,.7,1.8),lightStone);cor.position.set(0,15.2,.1);scene.add(cor);
+  for(let i=0;i<4;i++){const st=new T.Mesh(new T.BoxGeometry(11-i*.7,.2,3.2-i*.5),lightStone);st.position.set(0,.1+i*.0,2.6+(3-i)*.35);st.scale.y=1;st.position.y=.1+(3-i)*.0;scene.add(st);}
+  for(let i=0;i<3;i++){const st=new T.Mesh(new T.BoxGeometry(9.4-i*.8,.18*(i+1)+.1,1.1),lightStone);st.position.set(0,(.18*(i+1)+.1)/2,1.2+(2-i)*1.0);scene.add(st);}
+  const dm=new T.MeshStandardMaterial({map:doorTex(),roughness:.6});
+  window.__leaves=[-1,1].map(s=>{const pivot=new T.Group();pivot.position.set(s*(CHORD/2-.03),0,-.4);
+    const geo=new T.BoxGeometry(CHORD/2-.02,4.3,.1);geo.translate(-s*(CHORD/4-.01),2.15,0);
+    const m=new T.Mesh(geo,dm);pivot.add(m);scene.add(pivot);pivot.userData.s=s;return pivot;});
+  const warm=new T.PointLight(0xffc070,1.5,16,1.6);warm.position.set(0,2.6,-2);scene.add(warm);
+  const moon=new T.DirectionalLight(0x7f94c8,.55);moon.position.set(-20,30,40);scene.add(moon);
+  const st=new Float32Array(900),sp=new T.BufferGeometry();for(let i=0;i<300;i++){const a=Math.random()*Math.PI*2,e=.12+Math.random()*1.2,rr=190;st[i*3]=Math.cos(a)*Math.cos(e)*rr;st[i*3+1]=Math.sin(e)*rr+10;st[i*3+2]=-Math.abs(Math.sin(a)*Math.cos(e)*rr)-30;}
+  sp.setAttribute('position',new T.BufferAttribute(st,3));scene.add(new T.Points(sp,new T.PointsMaterial({size:1.6,sizeAttenuation:false,color:0xdfe6ff,fog:false})));
+})();
+scene.add(new T.HemisphereLight(0x8a8fb0,0x2a1c10,.24));
+
+/* ---------- build rooms, corridors, paintings ---------- */
+const PITCH=2*DOOR+8;
+const RC=[{cx:0,cz:-12,doors:[180,90],grad:true},{cx:PITCH,cz:-12,doors:[270,90],col:0x235135},{cx:PITCH*2,cz:-12,doors:[270],col:0xDCC8AD}];
+RC.forEach((c,i)=>{const r=buildRoom(c,i);c.tint=r.tint;});
+buildCorridor(0,-DOOR/2-.0,DOOR-.0,0,true);
+buildCorridor(DOOR+4,-12,8,Math.PI/2,false);
+buildCorridor(PITCH+DOOR+4,-12,8,Math.PI/2,false);
+const ANG=[[0,120,240],[495-0,585,720],[855,945,1080]];
+ANG[1]=[495,585,720];
+const spots=[];const maxTex=renderer.capabilities.maxTextures||8;let shadowBudget=Math.max(0,Math.min(9,maxTex-7));
+const beamMat=new T.MeshBasicMaterial({color:0xffe2a8,transparent:true,opacity:.05,blending:T.AdditiveBlending,depthWrite:false,side:T.DoubleSide,fog:false});
+ART.forEach((a,i)=>{
+  const rc=RC[a.room],slot=i%3,deg=ANG[a.room][slot],th=deg*D;
+  const tex=new T.CanvasTexture(mkPaint(a.draw));tex.anisotropy=8;a.canvas=tex.image;
+  const pw=a.shape==='rect'?2.7:2.5,ph=a.shape==='rect'?3.4:3.3;
+  const grp=frameMesh(a.shape,pw,ph,tex);
+  grp.position.set(rc.cx+Math.sin(th)*ARTR,3.0,rc.cz-Math.cos(th)*ARTR);grp.rotation.y=-th;scene.add(grp);
+  const pc=rc.tint(th).clone().multiplyScalar(.55);
+  const panel=new T.Mesh(new T.BoxGeometry(4.2,5.0,.3),new T.MeshStandardMaterial({color:pc,roughness:.95}));
+  panel.position.set(rc.cx+Math.sin(th)*(ARTR+.15),3.0,rc.cz-Math.cos(th)*(ARTR+.15));panel.rotation.y=-th;panel.receiveShadow=true;scene.add(panel);
+  const ly=ph/2+.52;
+  const bar=new T.Mesh(new T.CylinderGeometry(.04,.04,1.3,10),brassMat);bar.rotation.z=Math.PI/2;bar.position.set(0,ly,.5);grp.add(bar);
+  const arm=new T.Mesh(new T.BoxGeometry(.05,.05,.5),brassMat);arm.position.set(0,ly,.25);grp.add(arm);
+  const plq=new T.Mesh(new T.BoxGeometry(.6,.17,.03),brassMat);plq.position.set(0,-ph/2-.62,.05);grp.add(plq);
+  grp.updateMatrixWorld(true);
+  const lampW=grp.localToWorld(new T.Vector3(0,ly-.05,.5)),tgtW=grp.localToWorld(new T.Vector3(0,0,.05));
+  const sp=new T.SpotLight(0xffd9a0,1.9,15,.5,.7,1.6);sp.position.copy(lampW);sp.target.position.copy(tgtW);scene.add(sp,sp.target);
+  if(shadowBudget>0){sp.castShadow=true;sp.shadow.mapSize.set(1024,1024);sp.shadow.camera.near=.4;sp.shadow.camera.far=12;sp.shadow.bias=-.0008;shadowBudget--;}
+  const len=lampW.distanceTo(tgtW),cone=new T.Mesh(new T.ConeGeometry(1.9,len,28,1,true),beamMat);
+  cone.position.copy(lampW).add(tgtW).multiplyScalar(.5);cone.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),lampW.clone().sub(tgtW).normalize());scene.add(cone);
+  a.deg=deg;a.num=slot+1;
+});
+
+/* ---------- camera timeline ---------- */
+const K=[];
+const EXIT=[450,810];
+K.push({kind:'hero',mv:0,hold:.9,cx:0,cz:0,a:0,rp:-17,rt:0,s:-3.4,v:2.4,y:2.4,ty:3.3});
+K.push({kind:'move',mv:1,hold:.15,cx:0,cz:0,a:0,rp:-6,rt:0,s:0,v:0,y:2.1,ty:2.9});
+const startA=[0,450,810];
+RC.forEach((rc,ri)=>{
+  K.push({kind:'room',room:ri,mv:ri?1.2:1.5,hold:.9,cx:rc.cx,cz:rc.cz,a:startA[ri]*D,rp:0,rt:8.9,s:0,v:0,y:2.1,ty:2.9});
+  ART.filter(a=>a.room===ri).forEach(a=>{K.push({kind:'art',room:ri,art:a,mv:.85,hold:ri===2&&a.num===3?1.6:1.15,cx:rc.cx,cz:rc.cz,a:a.deg*D,rt:ARTR-.08,y:2.2,ty:3.0});});
+  if(ri<2){
+    K.push({kind:'move',room:ri,mv:.9,hold:.05,cx:rc.cx,cz:rc.cz,a:EXIT[ri]*D,rp:0,rt:8.9,s:0,v:0,y:2.1,ty:2.9});
+    K.push({kind:'corr',txt:TRANS[ri],mv:1.1,hold:1,cx:rc.cx+DOOR+4,cz:-12,a:EXIT[ri]*D,rp:0,rt:6,s:0,v:0,y:2.0,ty:2.7});
+  }
+});
+let U=0;K.forEach(k=>{k.s0=U;U+=k.mv;k.h0=U;U+=k.hold;k.h1=U;});
+const roomKeyIdx=K.map((k,i)=>k.kind==='room'?i:-1).filter(i=>i>=0);
+
+function eff(k,asp){
+  const land=asp>.9,dist=land?5.4:Math.max(5.4,5.4/(asp*1.25));
+  let rp=k.rp,s=k.s||0,v=k.v||0;
+  if(k.art){rp=ARTR-dist;s=(k.art.side==='L'?1:-1)*Math.min(2.3,1.16*asp);v=.2*dist;}
+  return {cx:k.cx,cz:k.cz,a:k.a,rp,rt:k.rt,y:k.y,ty:k.ty,s:land?s:0,v:land?0:v};
+}
+const mixE=(p,q,t)=>{const o={};for(const n in p)o[n]=lerp(p[n],q[n],t);return o;};
+function camAt(u,asp){
+  for(let i=0;i<K.length;i++){const k=K[i];
+    if(i>0&&u<k.h0){const p=K[i-1];const t=clamp((u-p.h1)/(k.h0-p.h1));return mixE(eff(p,asp),eff(k,asp),sm(t));}
+    if(u<=k.h1)return eff(k,asp);}
+  return eff(K[K.length-1],asp);
+}
+function applyCam(e,asp,time){
+  const sa=Math.sin(e.a),ca=Math.cos(e.a);
+  camera.position.set(e.cx+sa*e.rp,e.y+Math.sin(time*.6)*.012,e.cz-ca*e.rp);
+  camera.lookAt(e.cx+sa*e.rt+ca*e.s,e.ty-e.v,e.cz-ca*e.rt+sa*e.s);
+}
+
+/* ---------- overlays ---------- */
+const ovHero=$('ovHero'),ovRoom=$('ovRoom'),ovCorr=$('ovCorr'),ovArt=$('ovArt'),artIn=$('artIn');
+let shownArt=null,shownRoom=-1,shownCorr=-1;
+function alphaOf(k,u,fade){const d=u<k.h0?k.h0-u:(u>k.h1?u-k.h1:0);return sm(clamp(1-d/fade));}
+function updateOverlays(u,asp){
+  let hA=0,rA=0,rIdx=-1,cA=0,cIdx=-1,aA=0,aIdx=-1;
+  K.forEach((k,i)=>{
+    if(k.kind==='hero')hA=alphaOf(k,u,.5);
+    else if(k.kind==='room'){const a=alphaOf(k,u,.55);if(a>rA){rA=a;rIdx=i;}}
+    else if(k.kind==='corr'){const a=alphaOf(k,u,.5);if(a>cA){cA=a;cIdx=i;}}
+    else if(k.kind==='art'){const a=alphaOf(k,u,.5);if(a>aA){aA=a;aIdx=i;}}
+  });
+  ovHero.style.setProperty('--a',hA.toFixed(3));ovHero.style.visibility=hA>.01?'visible':'hidden';
+  $('enterBtn').style.pointerEvents=hA>.6?'auto':'none';
+  if(rIdx>=0&&K[rIdx].room!==shownRoom){shownRoom=K[rIdx].room;const r=ROOMS[shownRoom];$('rTag').textContent=r.tag;$('rH').textContent=r.h;$('rSub').textContent=r.sub;$('rSub').style.display=r.sub?'':'none';}
+  ovRoom.style.setProperty('--a',rA.toFixed(3));ovRoom.style.visibility=rA>.01?'visible':'hidden';
+  if(cIdx>=0&&cIdx!==shownCorr){shownCorr=cIdx;$('cTxt').textContent=K[cIdx].txt;}
+  ovCorr.style.setProperty('--a',cA.toFixed(3));ovCorr.style.visibility=cA>.01?'visible':'hidden';
+  if(aIdx>=0){const k=K[aIdx],a=k.art;
+    if(shownArt!==a){shownArt=a;$('aNo').textContent=`№ 0${a.num} · Зал ${ROOMS[a.room].roman}`;$('aT').textContent=a.title;$('aH').textContent=a.hook;$('aD').textContent=a.desc;
+      ovArt.classList.toggle('r',a.side==='L');ovArt.classList.toggle('l',a.side==='R');ovArt.style.setProperty('--dx',a.side==='L'?30:-30);artIn.style.transform='';}
+    const hp=clamp((u-k.h0)/Math.max(.001,k.h1-k.h0));const diff=artIn.offsetHeight-ovArt.clientHeight;
+    artIn.style.transform=diff>2?`translateY(${-diff*clamp((hp-.12)/.7)}px)`:'';}
+  ovArt.style.setProperty('--a',aA.toFixed(3));ovArt.style.visibility=aA>.01?'visible':'hidden';
+  // hud
+  let cur=null;for(let i=0;i<K.length;i++){if(K[i].s0<=u&&K[i].room!==undefined)cur=K[i];}
+  const inRoom=u>=K[roomKeyIdx[0]].s0+K[roomKeyIdx[0]].mv*.6;
+  $('hRoman').textContent=inRoom&&cur?`Зал ${ROOMS[cur.room].roman}`:'';$('hName').textContent=inRoom&&cur?` · ${ROOMS[cur.room].name}`:'';
+}
+
+/* ---------- sizing & scroll ---------- */
+const track=$('track');let asp=1,uT=0,uS=0;
+function resize(){const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);asp=w/h;camera.aspect=asp;camera.fov=asp>.9?50:62;camera.updateProjectionMatrix();track.style.height=(h*(U+1))+'px';readU();}
+function readU(){const max=track.offsetHeight-stage.clientHeight;const top=track.getBoundingClientRect().top;uT=clamp(-top/Math.max(1,max))*U;}
+window.addEventListener('resize',resize);window.addEventListener('scroll',readU,{passive:true});
+
+function goU(u){const max=track.offsetHeight-stage.clientHeight;const y=track.getBoundingClientRect().top+window.scrollY+(u/U)*max;window.scrollTo({top:y,behavior:'smooth'});}
+$('enterBtn').addEventListener('click',()=>goU(K[roomKeyIdx[0]].h0+.05));
+document.querySelectorAll('[data-go]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();const g=a.dataset.go;
+  if(g==='top')window.scrollTo({top:0,behavior:'smooth'});else{const el=$(g);window.scrollTo({top:el.getBoundingClientRect().top+window.scrollY,behavior:'smooth'});}}));
+
+/* ---------- flat sections: visuals, copy, form ---------- */
+(function flat(){
+  const m=$('mVisual').getContext('2d');m.drawImage(ART[1].canvas,0,0,800,1000);
+  X=$('tPortrait').getContext('2d');X.canvas.width=800;X.canvas.height=1000;DRAW.portrait();paintify();
+  const hc=mkPaint('phone',1600,640);$('cHero').getContext('2d').drawImage(hc,0,0);
+  const stat=$('fstat');
+  const fallback=(t,btn)=>{const ta=document.createElement('textarea');ta.value=t;ta.style.cssText='position:fixed;opacity:0';document.body.appendChild(ta);ta.select();let ok=false;try{ok=document.execCommand('copy');}catch(e){}document.body.removeChild(ta);done(btn,ok);};
+  const done=(btn,ok)=>{btn.textContent=ok?'Скопировано':'Выделите и скопируйте';setTimeout(()=>btn.textContent='Скопировать',1800);};
+  document.querySelectorAll('.cp').forEach(b=>b.addEventListener('click',()=>{const t=b.dataset.copy;
+    try{navigator.clipboard.writeText(t).then(()=>done(b,true),()=>fallback(t,b));}catch(e){fallback(t,b);}}));
+  $('msgForm').addEventListener('submit',e=>{e.preventDefault();
+    const n=$('fName').value.trim(),em=$('fMail').value.trim(),ms=$('fMsg').value.trim();
+    if(!n||!/^\S+@\S+\.\S+$/.test(em)||!ms){stat.textContent='Заполните имя, корректный email и текст сообщения.';return;}
+    stat.textContent='Это демонстрационная форма: сообщение никуда не отправляется. Напишите нам на art@artremake.io или в Telegram @ArtRemake_Support.';});
+})();
+
+/* ---------- loop ---------- */
+resize();
+renderer.shadowMap.needsUpdate=true;
+let last=performance.now();
+function frame(now){
+  const dt=Math.min(.05,(now-last)/1000);last=now;
+  const visible=track.getBoundingClientRect().bottom>0;
+  if(visible){
+    uS+=(uT-uS)*(1-Math.exp(-dt*5.5));if(Math.abs(uT-uS)<1e-4)uS=uT;
+    const e=camAt(uS,asp);applyCam(e,asp,now/1000);
+    const open=.5+(1.55-.5)*sm(clamp((uS-.55)/1.35));
+    window.__leaves.forEach(p=>{p.rotation.y=p.userData.s<0?open:-open;});
+    updateOverlays(uS,asp);
+    $('rail').parentNode.style.setProperty('--p',0);$('rail').style.setProperty('--p',(uS/U).toFixed(4));
+    renderer.render(scene,camera);
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+setTimeout(()=>$('loader').classList.add('gone'),350);
+})();
+</script>
